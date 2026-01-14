@@ -75,3 +75,4 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSend, disabled = false, loading
 
 export default ChatInput;
 
+

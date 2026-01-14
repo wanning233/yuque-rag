@@ -1,12 +1,13 @@
 # server.py
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from app import initialize_retriever_and_llm
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
+from auth.auth import AuthService, get_current_user, user_manager
 
 # 初始化 RAG 模型
 retriever, llm = initialize_retriever_and_llm()
@@ -50,6 +51,23 @@ app.add_middleware(
 
 # ============== 数据模型 ==============
 
+class LoginRequest(BaseModel):
+    """登录请求模型"""
+    username: str = Field(..., description="用户名", example="admin")
+    password: str = Field(..., description="密码", example="admin123")
+    device_info: Optional[str] = Field(None, description="设备信息（可选）", example="Chrome on Windows")
+
+class LoginResponse(BaseModel):
+    """登录响应模型"""
+    access_token: str = Field(..., description="访问令牌")
+    token_type: str = Field(..., description="令牌类型", example="bearer")
+    username: str = Field(..., description="用户名")
+    expires_in: int = Field(..., description="过期时间（秒）")
+
+class LogoutResponse(BaseModel):
+    """登出响应模型"""
+    message: str = Field(..., description="响应消息", example="登出成功")
+
 class QueryRequest(BaseModel):
     """问答请求模型"""
     question: str = Field(
@@ -73,6 +91,109 @@ class HealthResponse(BaseModel):
 
 
 # ============== API 接口 ==============
+
+# ============== 认证接口 ==============
+
+@app.post(
+    "/auth/login",
+    response_model=LoginResponse,
+    tags=["认证"],
+    summary="用户登录",
+    description="使用用户名和密码登录系统。一个账号同时只能在一台设备登录，新设备登录会使旧设备的登录失效。"
+)
+def login(req: LoginRequest):
+    """
+    用户登录接口
+    
+    **默认测试账号：**
+    - 用户名: `admin`, 密码: `admin123`
+    - 用户名: `user1`, 密码: `password123`
+    - 用户名: `test`, 密码: `test123`
+    
+    **单设备登录机制：**
+    - 每次登录会生成新的token
+    - 新token会自动使旧token失效
+    - 其他设备的旧token将无法继续使用
+    
+    Args:
+        req: 包含用户名、密码和设备信息的请求体
+        
+    Returns:
+        LoginResponse: 包含access_token和用户信息
+        
+    Raises:
+        HTTPException 401: 用户名或密码错误
+    """
+    try:
+        result = AuthService.login(
+            username=req.username,
+            password=req.password,
+            device_info=req.device_info or ""
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"登录失败: {str(e)}")
+
+
+@app.post(
+    "/auth/logout",
+    response_model=LogoutResponse,
+    tags=["认证"],
+    summary="用户登出",
+    description="登出当前用户，使token失效"
+)
+def logout(current_user: str = Depends(get_current_user)):
+    """
+    用户登出接口
+    
+    需要在请求头中携带有效的token：
+    ```
+    Authorization: Bearer <your_token>
+    ```
+    
+    Args:
+        current_user: 当前认证的用户名（自动注入）
+        
+    Returns:
+        LogoutResponse: 登出成功消息
+    """
+    try:
+        AuthService.logout(current_user)
+        return {"message": f"用户 {current_user} 已登出"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"登出失败: {str(e)}")
+
+
+@app.get(
+    "/auth/me",
+    tags=["认证"],
+    summary="获取当前用户信息",
+    description="获取当前登录用户的信息"
+)
+def get_me(current_user: str = Depends(get_current_user)):
+    """
+    获取当前用户信息
+    
+    需要在请求头中携带有效的token：
+    ```
+    Authorization: Bearer <your_token>
+    ```
+    
+    Args:
+        current_user: 当前认证的用户名（自动注入）
+        
+    Returns:
+        用户信息
+    """
+    return {
+        "username": current_user,
+        "message": "认证成功"
+    }
+
+
+# ============== 系统接口 ==============
 
 @app.get(
     "/health",
@@ -99,14 +220,20 @@ def health_check():
     response_model=ChatResponse,
     tags=["问答"],
     summary="问答接口（一次性返回）",
-    description="向系统提问并获取完整答案（非流式）"
+    description="向系统提问并获取完整答案（非流式）【需要登录】"
 )
-def chat(req: QueryRequest):
+def chat(req: QueryRequest, current_user: str = Depends(get_current_user)):
     """
     常规问答接口，返回完整的答案。
     
+    **需要认证：** 请在请求头中携带token
+    ```
+    Authorization: Bearer <your_token>
+    ```
+    
     Args:
         req: 包含用户问题的请求体
+        current_user: 当前认证的用户名（自动注入）
         
     Returns:
         ChatResponse: 包含生成的答案
@@ -135,7 +262,7 @@ def chat(req: QueryRequest):
     "/chat/stream",
     tags=["问答"],
     summary="问答接口（流式返回）",
-    description="向系统提问并获取流式答案（SSE格式，支持实时打字效果）",
+    description="向系统提问并获取流式答案（SSE格式，支持实时打字效果）【需要登录】",
     responses={
         200: {
             "description": "成功返回流式数据",
@@ -147,14 +274,20 @@ def chat(req: QueryRequest):
         }
     }
 )
-async def chat_stream(req: QueryRequest):
+async def chat_stream(req: QueryRequest, current_user: str = Depends(get_current_user)):
     """
     流式问答接口，使用 Server-Sent Events (SSE) 返回答案。
     
     适用于需要实时展示回答进度的场景（如前端打字机效果）。
     
+    **需要认证：** 请在请求头中携带token
+    ```
+    Authorization: Bearer <your_token>
+    ```
+    
     Args:
         req: 包含用户问题的请求体
+        current_user: 当前认证的用户名（自动注入）
         
     Returns:
         StreamingResponse: SSE 格式的流式响应
