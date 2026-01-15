@@ -65,9 +65,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({message}) => {
           return null;
         }
 
+        // 根据主题设置公式颜色
+        const formulaColor = isDark ? Colors.textDark : Colors.text;
+
         return (
           <View key={node.key} style={equationStyle}>
-            <MathJax>{mathContent}</MathJax>
+            <MathJax color={formulaColor}>{mathContent}</MathJax>
           </View>
         );
       };
@@ -82,7 +85,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({message}) => {
         ),
       };
     },
-    [],
+    [isDark],
   );
 
   // 格式化时间戳
