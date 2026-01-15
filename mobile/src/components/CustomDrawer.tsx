@@ -19,6 +19,7 @@ import {useAuth} from '../contexts/AuthContext';
 import {Storage} from '../utils/storage';
 import {ChatSession} from '../types';
 import {MainStackParamList} from '../navigation/AppNavigator';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const DRAWER_WIDTH = 300;
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
@@ -28,6 +29,7 @@ type DrawerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Drawe
 export const DrawerScreen: React.FC = () => {
   const navigation = useNavigation<DrawerScreenNavigationProp>();
   const isDark = useColorScheme() === 'dark';
+  const insets = useSafeAreaInsets();
   const {user} = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
@@ -96,7 +98,7 @@ export const DrawerScreen: React.FC = () => {
   const borderColor = isDark ? Colors.borderDark : Colors.border;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       {/* 抽屉内容 */}
       <Animated.View
         style={[

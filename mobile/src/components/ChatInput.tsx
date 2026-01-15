@@ -95,11 +95,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           >
             <Icon
               name={canSend ? 'send' : 'graphic-eq'}
-              size={24}
+              size={canSend ? 18 : 24}
               color={
-                canSend
-                  ? Colors.primary
-                  : isDark
+                isDark
                   ? Colors.text
                   : Colors.textDark
               }
@@ -129,7 +127,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     borderRadius: 24,
     paddingHorizontal: Spacing.xs + 2,
     paddingLeft: Spacing.base,
@@ -159,7 +157,7 @@ const styles = StyleSheet.create({
   iconButton: {
     width: 32,
     height: 32,
-    justifyContent: 'center',
+    justifyContent: 'center', 
     alignItems: 'center',
   },
   audioButton: {
@@ -171,5 +169,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? 4 : 2,
   },
 });
