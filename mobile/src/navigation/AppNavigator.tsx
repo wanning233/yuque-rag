@@ -2,10 +2,11 @@ import React from 'react';
 import {NavigationContainer, useNavigation} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import {useColorScheme, View, Text, TouchableOpacity, StyleSheet, TouchableWithoutFeedback} from 'react-native';
+import {useColorScheme, View, Text, TouchableOpacity, StyleSheet, TouchableWithoutFeedback, Animated} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import { Logo } from '../asserts/logo';
 import {useAuth} from '../contexts/AuthContext';
+import {useHeaderContext, HeaderProvider} from '../contexts/HeaderContext';
 import {LoginScreen} from '../screens/LoginScreen';
 import {ChatScreen} from '../screens/ChatScreen';
 import {HistoryScreen} from '../screens/HistoryScreen';
@@ -42,6 +43,7 @@ const ChatHeader = () => {
   const navigation = useNavigation();
   const isDark = useColorScheme() === 'dark';
   const insets = useSafeAreaInsets();
+  const {headerOpacity} = useHeaderContext();
   
   const handleMenuPress = () => {
     (navigation as any).navigate('Drawer');
@@ -49,24 +51,33 @@ const ChatHeader = () => {
 
   const borderColor = isDark ? Colors.borderDark : Colors.border;
   return (
-    <View style={[headerStyles.container, 
-      {
-        paddingTop: insets.top + 12,
-        // backgroundColor: isDark ? Colors.backgroundDark : Colors.background,
-      }]}>
-      <TouchableOpacity 
-        style={[headerStyles.menuButton, 
-          { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground, borderColor },
-          { borderWidth: isDark ? 0.5 : 0 },
+    <Animated.View
+      style={[
+        headerStyles.container,
+        {
+          paddingTop: insets.top + 12,
+          opacity: headerOpacity,
+        },
+      ]}>
+      <TouchableOpacity
+        style={[
+          headerStyles.menuButton,
+          {
+            backgroundColor: isDark
+              ? Colors.inputBackgroundDark
+              : Colors.inputBackground,
+            borderColor,
+          },
+          {borderWidth: isDark ? 0.5 : 0},
         ]}
         onPress={handleMenuPress}>
         <Icon name="menu" size={24} color={Colors.primary} />
       </TouchableOpacity>
-      
+
       {/* <View style={headerStyles.rightButtons}>
         <Logo width={100} height={40} />
       </View> */}
-    </View>
+    </Animated.View>
   );
 };
 
@@ -175,7 +186,8 @@ export const AppNavigator = () => {
   }
 
   return (
-    <NavigationContainer
+    <HeaderProvider>
+      <NavigationContainer
       theme={{
         dark: isDark,
         colors: {
@@ -205,14 +217,15 @@ export const AppNavigator = () => {
           },
         },
       }}>
-      <RootStack.Navigator screenOptions={{headerShown: false}}>
-        {isAuthenticated ? (
-          <RootStack.Screen name="Main" component={MainNavigator} />
-        ) : (
-          <RootStack.Screen name="Auth" component={AuthNavigator} />
-        )}
-      </RootStack.Navigator>
-    </NavigationContainer>
+        <RootStack.Navigator screenOptions={{headerShown: false}}>
+          {isAuthenticated ? (
+            <RootStack.Screen name="Main" component={MainNavigator} />
+          ) : (
+            <RootStack.Screen name="Auth" component={AuthNavigator} />
+          )}
+        </RootStack.Navigator>
+      </NavigationContainer>
+    </HeaderProvider>
   );
 };
 

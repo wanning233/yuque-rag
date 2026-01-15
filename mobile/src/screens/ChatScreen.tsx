@@ -8,6 +8,7 @@ import {
   useColorScheme,
   Text,
   Keyboard,
+  Animated,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {MessageBubble} from '../components/MessageBubble';
@@ -16,6 +17,7 @@ import {Message} from '../types';
 import {ChatService} from '../services/chatService';
 import {Colors, Spacing} from '../config';
 import {Storage} from '../utils/storage';
+import {useHeaderContext} from '../contexts/HeaderContext';
 
 export const ChatScreen: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -25,6 +27,13 @@ export const ChatScreen: React.FC = () => {
   const isDark = useColorScheme() === 'dark';
   const currentStreamingMessageId = useRef<string | null>(null);
   const insets = useSafeAreaInsets();
+  
+  // 滚动相关状态
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const scrollDirection = useRef<'up' | 'down' | null>(null);
+  const {headerOpacity} = useHeaderContext();
+  const inputTranslateY = useRef(new Animated.Value(0)).current;
 
   // 加载历史消息
   useEffect(() => {
@@ -56,6 +65,15 @@ export const ChatScreen: React.FC = () => {
         keyboardWillHideListener.remove();
       };
     }
+  }, []);
+
+  // 清理滚动定时器
+  useEffect(() => {
+    return () => {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
   }, []);
 
   // 自动滚动到底部
@@ -207,6 +225,86 @@ export const ChatScreen: React.FC = () => {
     },
   ];
 
+  // 处理滚动事件
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const handleScroll = Animated.event(
+    [{nativeEvent: {contentOffset: {y: scrollY}}}],
+    {
+      useNativeDriver: false,
+      listener: (event: any) => {
+        const currentScrollY = event.nativeEvent.contentOffset.y;
+        const deltaY = currentScrollY - lastScrollY.current;
+        const scrollThreshold = 10; // 滚动阈值，避免小幅度滚动触发
+
+        // 清除之前的定时器
+        if (scrollTimeoutRef.current) {
+          clearTimeout(scrollTimeoutRef.current);
+        }
+
+        // 如果滚动停止，显示两者
+        scrollTimeoutRef.current = setTimeout(() => {
+          scrollDirection.current = null;
+          Animated.parallel([
+            Animated.timing(headerOpacity, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(inputTranslateY, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
+        }, 150);
+
+        if (Math.abs(deltaY) > scrollThreshold) {
+          if (deltaY > 0 && currentScrollY > 30) {
+            // 向下滚动 - 隐藏顶部header
+            if (scrollDirection.current !== 'down') {
+              scrollDirection.current = 'down';
+              Animated.timing(headerOpacity, {
+                toValue: 0,
+                duration: 200,
+                useNativeDriver: true,
+              }).start();
+            }
+          } else if (deltaY < 0) {
+            // 向上滚动 - 隐藏底部输入框
+            if (scrollDirection.current !== 'up') {
+              scrollDirection.current = 'up';
+              Animated.timing(inputTranslateY, {
+                toValue: 150,
+                duration: 200,
+                useNativeDriver: true,
+              }).start();
+            }
+          }
+        }
+
+        // 接近顶部时显示两者
+        if (currentScrollY < 20) {
+          Animated.parallel([
+            Animated.timing(headerOpacity, {
+              toValue: 1,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+            Animated.timing(inputTranslateY, {
+              toValue: 0,
+              duration: 200,
+              useNativeDriver: true,
+            }),
+          ]).start();
+          scrollDirection.current = null;
+        }
+
+        lastScrollY.current = currentScrollY;
+      },
+    },
+  );
+
   // 计算 header 高度（包含安全区域）
   const headerHeight = insets.top + 60; // 安全区域 + header 内容高度
 
@@ -236,16 +334,23 @@ export const ChatScreen: React.FC = () => {
           ]}
           style={{backgroundColor: isDark ? Colors.backgroundDark : Colors.background}}
           showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           onContentSizeChange={() => {
             flatListRef.current?.scrollToEnd({animated: true});
           }}
         />
       )}
-      <ChatInput
-        onSend={handleSend}
-        disabled={isLoading}
-        placeholder={isLoading ? 'AI is thinking...' : 'Ask QuickQue anything...'}
-      />
+      <Animated.View
+        style={{
+          transform: [{translateY: inputTranslateY}],
+        }}>
+        <ChatInput
+          onSend={handleSend}
+          disabled={isLoading}
+          placeholder={isLoading ? 'AI is thinking...' : 'Ask QuickQue anything...'}
+        />
+      </Animated.View>
     </>
   );
 
