@@ -46,14 +46,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     <View
       style={[
         styles.container,
-        { paddingBottom: Math.max(insets.bottom, Spacing.md) },
+        // { paddingBottom: Math.max(insets.bottom, Spacing.md) },
+        { paddingBottom: insets.bottom },
       ]}
     >
       {/* 左侧加号按钮 */}
-      <TouchableOpacity style={[styles.addButton, { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground }]}>
+      <TouchableOpacity style={[styles.addButton, 
+        { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground, borderColor },
+        { borderWidth: isDark ? 0.5 : 0 },
+      ]}>
         <Icon
           name="add"
-          size={32}
+          size={30}
           // color={isDark ? Colors.textDark : Colors.text}
           color={Colors.primary}
         />
@@ -64,6 +68,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         style={[
           styles.inputContainer,
           { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground, borderColor },
+          { borderWidth: isDark ? 0.5 : 0 },
         ]}
       >
         <TextInput
@@ -111,11 +116,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    bottom: 24,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.md,
     gap: Spacing.base,
+    // iOS 阴影
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    // Android 阴影
+    elevation: 8,
   },
   addButton: {
     width: 44,
@@ -123,6 +142,17 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 0,
+    // iOS 阴影
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1, // 阴影透明度
+    shadowRadius: 0, // 阴影半径
+    // Android 阴影
+    elevation: 12, // 阴影层级
   },
   inputContainer: {
     flex: 1,
@@ -134,17 +164,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.xs,
     minHeight: 44,
     maxHeight: 100,
-    borderWidth: 1,
+    borderWidth: 0,
     // iOS 阴影
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.1, // 阴影透明度
+    shadowRadius: 0, // 阴影半径
     // Android 阴影
-    elevation: 3,
+    elevation: 12, // 阴影层级
   },
   input: {
     flex: 1,

@@ -34,8 +34,8 @@ export const Colors = {
   inputBackgroundDark: '#2a2a2a',
   
   // 背景色
-  background: '#f5f5f5',
-  backgroundDark: '#121212',
+  background: 'rgba(255, 255, 255, 0.7)',
+  backgroundDark: 'rgba(0, 0, 0, 0.7)',
   
   // 卡片背景
   card: '#ffffff',
@@ -49,7 +49,7 @@ export const Colors = {
   
   // 边框颜色
   border: '#e0e0e0',
-  borderDark: '#333333',
+  borderDark: '#666666',
   
   // 消息气泡
   userBubble: '#ee4d2d',

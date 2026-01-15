@@ -46,20 +46,22 @@ const ChatHeader = () => {
   const handleMenuPress = () => {
     (navigation as any).navigate('Drawer');
   };
-  
+
+  const borderColor = isDark ? Colors.borderDark : Colors.border;
   return (
     <View style={[headerStyles.container, 
       {
-        paddingTop: insets.top + 12, 
-        backgroundColor: isDark ? Colors.backgroundDark : Colors.background
+        paddingTop: insets.top + 12,
+        // backgroundColor: isDark ? Colors.backgroundDark : Colors.background,
       }]}>
       <TouchableOpacity 
-        style={[headerStyles.menuButton, { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground }]}
+        style={[headerStyles.menuButton, 
+          { backgroundColor: isDark ? Colors.inputBackgroundDark : Colors.inputBackground, borderColor },
+          { borderWidth: isDark ? 0.5 : 0 },
+        ]}
         onPress={handleMenuPress}>
         <Icon name="menu" size={24} color={Colors.primary} />
       </TouchableOpacity>
-      
-      
       
       {/* <View style={headerStyles.rightButtons}>
         <Logo width={100} height={40} />
@@ -216,11 +218,17 @@ export const AppNavigator = () => {
 
 const headerStyles = StyleSheet.create({
   container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingBottom: 12,
     justifyContent: 'space-between',
+    
   },
   menuButton: {
     width: 40,
@@ -229,6 +237,16 @@ const headerStyles = StyleSheet.create({
     borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
+    // iOS 阴影
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    // Android 阴影
+    elevation: 12,
   },
   titleContainer: {
     flexDirection: 'row',

@@ -207,10 +207,13 @@ export const ChatScreen: React.FC = () => {
     },
   ];
 
+  // 计算 header 高度（包含安全区域）
+  const headerHeight = insets.top + 60; // 安全区域 + header 内容高度
+
   const content = (
     <>
       {messages.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={[styles.emptyContainer, {paddingTop: headerHeight}]}>
           <Text style={[styles.emptyText, {color: isDark ? Colors.textSecondaryDark : Colors.textSecondary}]}>
             👋 Hello! I am QuickQue assistant
           </Text>
@@ -224,8 +227,15 @@ export const ChatScreen: React.FC = () => {
           data={messages}
           keyExtractor={item => item.id}
           renderItem={({item}) => <MessageBubble message={item} />}
-          contentContainerStyle={styles.messageList}
+          contentContainerStyle={[
+            styles.messageList,
+            {
+              paddingTop: headerHeight,
+              paddingBottom: insets.bottom + 100,
+            },
+          ]}
           style={{backgroundColor: isDark ? Colors.backgroundDark : Colors.background}}
+          showsVerticalScrollIndicator={false}
           onContentSizeChange={() => {
             flatListRef.current?.scrollToEnd({animated: true});
           }}
