@@ -44,6 +44,7 @@ export const ChatScreen: React.FC = () => {
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const {headerOpacity} = useHeaderContext();
   const inputTranslateY = useRef(new Animated.Value(0)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current;
 
   // 滚动到底部的辅助函数
   const scrollToEnd = useCallback((delay: number = 100) => {
@@ -137,11 +138,22 @@ export const ChatScreen: React.FC = () => {
       showEvent,
       (e) => {
         setIsKeyboardVisible(true);
-        setKeyboardHeight(e.endCoordinates.height);
+        const height = e.endCoordinates.height;
+        setKeyboardHeight(height);
         // 键盘弹起时确保输入框位置重置为 0，避免闪烁
         Animated.timing(inputTranslateY, {
           toValue: 0,
           duration: 0, // 立即重置，避免动画
+          useNativeDriver: true,
+        }).start();
+        // 键盘弹起时，将输入框上移
+        // 输入框原本 bottom: 24，键盘高度为 height
+        // 为了让输入框在键盘上方，需要上移 (键盘高度 - 24)
+        // 但考虑到输入框内部已有 paddingBottom: insets.bottom，实际只需要上移 (height - 24)
+        const offset = -(height - 24);
+        Animated.timing(keyboardOffset, {
+          toValue: offset,
+          duration: Platform.OS === 'ios' ? (e?.duration || 250) : 100,
           useNativeDriver: true,
         }).start();
         // 键盘弹起时滚动到底部
@@ -150,9 +162,15 @@ export const ChatScreen: React.FC = () => {
     );
     const keyboardWillHideListener = Keyboard.addListener(
       hideEvent,
-      () => {
+      (e) => {
         setIsKeyboardVisible(false);
         setKeyboardHeight(0);
+        // 键盘隐藏时，恢复输入框位置
+        Animated.timing(keyboardOffset, {
+          toValue: 0,
+          duration: Platform.OS === 'ios' ? (e?.duration || 250) : 100,
+          useNativeDriver: true,
+        }).start();
       }
     );
 
@@ -469,7 +487,9 @@ export const ChatScreen: React.FC = () => {
       )}
       <Animated.View
         style={{
-          transform: [{translateY: inputTranslateY}],
+          transform: [
+            {translateY: Animated.add(inputTranslateY, keyboardOffset)},
+          ],
         }}>
         <ChatInput
           onSend={handleSend}
